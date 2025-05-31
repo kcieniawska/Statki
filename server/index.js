@@ -3,6 +3,14 @@ const cors = require('cors');
 
 const app = express();
 const PORT = 3001;
+const favicon = require('serve-favicon');
+const path = require('path');
+
+app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+
+// Pozostałe middleware i routing
+app.use(express.static(path.join(__dirname, 'build'))); // jeśli serwujesz Reacta
+
 
 app.use(cors());
 app.use(express.json());
