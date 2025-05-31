@@ -289,11 +289,18 @@ setEnemyBoard(generateEnemyBoard());
 
 const fire = (x, y) => {
   setEnemyBoard(prevBoard => {
+    const currentCell = prevBoard[y][x];
+    // Jeśli pole już było trafione lub pudło, nic nie rób
+    if (currentCell === '🔥' || currentCell === '🌊' || currentCell === '☠️') {
+      setMessage('Już tu strzelałeś!');
+      return prevBoard; // nie zmieniamy planszy
+    }
+
     const newBoard = prevBoard.map(row => [...row]);
 
     if (newBoard[y][x] === '🚢') {
       newBoard[y][x] = '🔥';
-      const updatedBoard = markSunkShips(newBoard);  // <-- dodaj to
+      const updatedBoard = markSunkShips(newBoard);
 
       setPlayerHits([...playerHits, [x, y]]);
       playerHitsRef.current = [...playerHits, [x, y]];
@@ -314,6 +321,7 @@ const fire = (x, y) => {
     }
   });
 };
+
 
 const computerTurn = useCallback(() => {
   if (gameOver || playerTurn !== 'computer') return;
