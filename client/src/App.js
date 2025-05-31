@@ -133,21 +133,14 @@ function markSunkShips(board) {
 
 
 function checkWin(board, shipSymbol) {
-  for (let row of board) {
-    if (row.includes(shipSymbol)) return false;
-  }
-  return true;
+  return !board.some(row => row.includes(shipSymbol));
 }
 
-function Popup({ message, onClose }) {
-  const isWin =
-    message?.toLowerCase().includes('wygrał') ||
-    message?.toLowerCase().includes('gratulacje');
-
+function Popup({ message, onClose, isPlayerWinner }) {
   return (
     <div className="popup-backdrop">
       <div className="popup">
-        {isWin ? (
+        {isPlayerWinner ? (
           <>
             <h2>🎉 Wygrałeś! 🎉</h2>
             <p>Wszystkie statki przeciwnika zatopione.</p>
@@ -373,31 +366,37 @@ const computerTurn = useCallback(() => {
     }
   });
 
-  // Po aktualizacji planszy robimy side-effecty:
-  setTimeout(() => {  // dajemy timeout, żeby stan zdążył się zaktualizować
-    const newHits = new Set(hits); // set do wygodniejszej pracy
-    if (playerBoard[y][x] === '🚢') { // Uwaga: playerBoard może być jeszcze stary, lepiej zrobić inaczej - patrz niżej
-      // Trafienie
-      const updatedHits = [...hits, [x, y]];
-      setComputerHits(updatedHits);
-      computerHitsRef.current = updatedHits;
-      setMessage('Komputer trafił! Strzela dalej...');
+  setTimeout(() => {
+  const newHits = [...hits];
+  const newBoard = playerBoard.map(row => [...row]);
 
-      // Sprawdź wygraną
-      if (checkWin(playerBoard, '🚢')) {
-        setMessage('Niestety, komputer wygrał 😞');
-        setGameOver(true);
-        return;
-      }
-      setPlayerTurn('computer');
-    } else {
-      // Pudło
-      setMessage('Komputer chybił! Twoja kolej.');
-      setPlayerTurn('player');
-      setComputerHits([]);
-      computerHitsRef.current = [];
+  if (newBoard[y][x] === '🚢') {
+    newBoard[y][x] = '🔥';
+    const updatedBoard = markSunkShips(newBoard); // jeśli masz oznaczanie zatopionych
+
+    const updatedHits = [...hits, [x, y]];
+    setComputerHits(updatedHits);
+    computerHitsRef.current = updatedHits;
+
+    setPlayerBoard(updatedBoard);
+
+    if (checkWin(updatedBoard, '🚢')) {
+      setMessage('Niestety, komputer wygrał 😞');
+      setGameOver(true);
+      return;
     }
-  }, 50);
+
+    setMessage('Komputer trafił! Strzela dalej...');
+    setPlayerTurn('computer');
+  } else {
+    newBoard[y][x] = '🌊';
+    setPlayerBoard(newBoard);
+    setMessage('Komputer chybił! Twoja kolej.');
+    setPlayerTurn('player');
+    setComputerHits([]);
+    computerHitsRef.current = [];
+  }
+}, 50);
   
 }, [gameOver, playerTurn, playerBoard]);
 useEffect(() => {
@@ -409,6 +408,7 @@ useEffect(() => {
       return () => clearTimeout(timer);
     }
   }, [playerTurn, gameOver, computerTurn]);
+
   const resetGame = () => {
     setGamePhase('start');
     setStartPage('opis');
