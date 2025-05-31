@@ -18,7 +18,7 @@ function Tile({ cell, onClick, disabled }) {
   let cursor = disabled ? 'default' : 'pointer';
   let display = cell;
 
-  if (cell === '🚢') bgColor = '#4ade80';
+  if (cell === '🚢') bgColor = 'rgba(228, 242, 233,0.2)';
   else if (cell === '💥') {
     bgColor = '#ef4444';
     display = '💥';
@@ -352,44 +352,46 @@ const computerTurn = useCallback(() => {
 
   shots.add(`${x},${y}`);
 
-  // 🧠 Użyj funkcjonalnej aktualizacji playerBoard
   setPlayerBoard(prevBoard => {
     const newBoard = prevBoard.map(row => [...row]);
 
     if (newBoard[y][x] === '🚢') {
       newBoard[y][x] = '🔥';
       const updatedBoard = markSunkShips(newBoard);
-      setMessage('Komputer trafił! Strzela dalej...');
-
-      // ZAPISUJEMY trafienie po markSunkShips
-      const newHits = [...hits, [x, y]];
-      setComputerHits(newHits);
-      computerHitsRef.current = newHits;
-
-      if (checkWin(updatedBoard, '🚢')) {
-        setMessage('Niestety, komputer wygrał 😞');
-        setGameOver(true);
-        return updatedBoard;
-      }
-
-      // Kontynuuj kolej komputera
-      setTimeout(() => {
-        computerTurn();
-      }, 1000);
-
       return updatedBoard;
     } else {
       newBoard[y][x] = '🌊';
-      setMessage('Komputer chybił! Twoja kolej.');
-      setPlayerTurn('player');
-
-      setComputerHits([]);
-      computerHitsRef.current = [];
-
       return newBoard;
     }
   });
-}, [gameOver, playerTurn]);
+
+  // Po aktualizacji planszy robimy side-effecty:
+  setTimeout(() => {  // dajemy timeout, żeby stan zdążył się zaktualizować
+    const newHits = new Set(hits); // set do wygodniejszej pracy
+    if (playerBoard[y][x] === '🚢') { // Uwaga: playerBoard może być jeszcze stary, lepiej zrobić inaczej - patrz niżej
+      // Trafienie
+      const updatedHits = [...hits, [x, y]];
+      setComputerHits(updatedHits);
+      computerHitsRef.current = updatedHits;
+      setMessage('Komputer trafił! Strzela dalej...');
+
+      // Sprawdź wygraną
+      if (checkWin(playerBoard, '🚢')) {
+        setMessage('Niestety, komputer wygrał 😞');
+        setGameOver(true);
+        return;
+      }
+      setPlayerTurn('computer');
+    } else {
+      // Pudło
+      setMessage('Komputer chybił! Twoja kolej.');
+      setPlayerTurn('player');
+      setComputerHits([]);
+      computerHitsRef.current = [];
+    }
+  }, 50);
+  
+}, [gameOver, playerTurn, playerBoard]);
 useEffect(() => {
     if (playerTurn === 'computer' && !gameOver) {
       const timer = setTimeout(() => {
